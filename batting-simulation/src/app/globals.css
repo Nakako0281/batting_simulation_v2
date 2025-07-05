@@ -1,0 +1,86 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --foreground-rgb: 0, 0, 0;
+  --background-start-rgb: 214, 219, 220;
+  --background-end-rgb: 255, 255, 255;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --foreground-rgb: 255, 255, 255;
+    --background-start-rgb: 0, 0, 0;
+    --background-end-rgb: 0, 0, 0;
+  }
+}
+
+body {
+  color: rgb(var(--foreground-rgb));
+  background: linear-gradient(
+      to bottom,
+      transparent,
+      rgb(var(--background-end-rgb))
+    )
+    rgb(var(--background-start-rgb));
+  min-height: 100vh;
+  background-color: #f8f9fa;
+}
+
+/* Mantineのカスタムスタイル */
+.mantine-Container-root {
+  max-width: 100%;
+}
+
+/* カスタムスクロールバー */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
+}
+
+/* テーブルのレスポンシブ対応 */
+@media (max-width: 768px) {
+  .mantine-Table-root {
+    font-size: 0.875rem;
+  }
+  
+  .mantine-Table-th,
+  .mantine-Table-td {
+    padding: 0.5rem 0.25rem;
+  }
+}
+
+/* カードのホバーエフェクト */
+.mantine-Card-root {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.mantine-Card-root:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+}
+
+/* NumberInputの最適化 */
+.mantine-NumberInput-input {
+  font-family: 'Courier New', monospace;
+  font-weight: 500;
+}
+
+.mantine-NumberInput-input:focus {
+  border-color: var(--mantine-color-blue-6);
+}
