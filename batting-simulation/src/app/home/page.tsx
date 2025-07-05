@@ -42,6 +42,7 @@ export default function HomePage() {
   const [awayTeamName, setAwayTeamName] = useState('アウェイチーム');
   const [homePlayers, setHomePlayers] = useState<Player[]>([]);
   const [awayPlayers, setAwayPlayers] = useState<Player[]>([]);
+  const [isDataSaved, setIsDataSaved] = useState(false);
 
   const createDefaultPlayer = (team: 'home' | 'away', position: number): Player => {
     const defaultStats = getDefaultStats();
@@ -64,6 +65,53 @@ export default function HomePage() {
   // コンポーネントマウント時に選手を初期化
   useEffect(() => {
     initializePlayers();
+  }, []);
+
+  // 選手データの保存
+  const savePlayerData = () => {
+    const playerData = {
+      homeTeamName,
+      awayTeamName,
+      homePlayers,
+      awayPlayers,
+      timestamp: new Date().toISOString()
+    };
+    localStorage.setItem('playerData', JSON.stringify(playerData));
+    setIsDataSaved(true);
+  };
+
+  // 選手データの読み込み
+  const loadPlayerData = () => {
+    const savedData = localStorage.getItem('playerData');
+    if (savedData) {
+      try {
+        const playerData = JSON.parse(savedData);
+        setHomeTeamName(playerData.homeTeamName || 'ホームチーム');
+        setAwayTeamName(playerData.awayTeamName || 'アウェイチーム');
+        setHomePlayers(playerData.homePlayers || []);
+        setAwayPlayers(playerData.awayPlayers || []);
+        setIsDataSaved(true);
+      } catch (error) {
+        console.error('選手データの読み込みに失敗しました:', error);
+        initializePlayers();
+        setIsDataSaved(false);
+      }
+    } else {
+      initializePlayers();
+      setIsDataSaved(false);
+    }
+  };
+
+  // 選手データの自動保存（選手データが変更されたとき）
+  useEffect(() => {
+    if (homePlayers.length > 0 && awayPlayers.length > 0) {
+      savePlayerData();
+    }
+  }, [homePlayers, awayPlayers, homeTeamName, awayTeamName]);
+
+  // コンポーネントマウント時に保存されたデータを読み込み
+  useEffect(() => {
+    loadPlayerData();
   }, []);
 
   const updatePlayer = (team: 'home' | 'away', position: number, field: keyof Player, value: string | number) => {
@@ -127,6 +175,16 @@ export default function HomePage() {
     
     // シーズンページに遷移
     router.push('/season');
+  };
+
+  const handleResetData = () => {
+    if (confirm('入力されている選手データをすべてリセットしますか？\nこの操作は取り消せません。')) {
+      localStorage.removeItem('playerData');
+      initializePlayers();
+      setHomeTeamName('ホームチーム');
+      setAwayTeamName('アウェイチーム');
+      setIsDataSaved(false);
+    }
   };
 
   const renderPlayerInputs = (players: Player[], team: 'home' | 'away') => (
@@ -286,6 +344,21 @@ export default function HomePage() {
           </Stack>
         </Paper>
 
+        {/* データ保存状態 */}
+        {isDataSaved && (
+          <Paper shadow="xs" p="md" radius="md" withBorder>
+            <Alert
+              title="データが保存されています"
+              color="green"
+              variant="light"
+              icon={<IconInfoCircle size={16} />}
+            >
+              選手データは自動的にローカルストレージに保存されています。
+              ブラウザを閉じても入力内容は保持されます。
+            </Alert>
+          </Paper>
+        )}
+
         {/* チーム名入力 */}
         <Paper shadow="xs" p="xl" radius="md" withBorder>
           <Stack gap="lg">
@@ -353,6 +426,16 @@ export default function HomePage() {
                   color="blue"
                 >
                   143試合をシミュレーション
+                </Button>
+              </Group>
+              <Group gap="md" mt="md">
+                <Button
+                  variant="light"
+                  leftSection={<IconInfoCircle size={16} />}
+                  onClick={handleResetData}
+                  color="red"
+                >
+                  データをリセット
                 </Button>
               </Group>
             </Stack>

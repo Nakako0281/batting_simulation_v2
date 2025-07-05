@@ -84,6 +84,17 @@ export default function HistoryPage() {
     }
   };
 
+  const clearAllData = () => {
+    if (confirm('すべてのデータ（試合履歴、シーズン履歴、選手データ）を削除しますか？\nこの操作は取り消せません。')) {
+      localStorage.removeItem('gameHistory');
+      localStorage.removeItem('seasonHistory');
+      localStorage.removeItem('playerData');
+      localStorage.removeItem('currentGame');
+      setGameHistory([]);
+      setSeasonHistory([]);
+    }
+  };
+
   const viewGameDetails = (game: GameHistoryItem) => {
     // 試合詳細を表示する機能（将来的に実装可能）
     alert(`${game.awayTeam.name} ${game.awayTeam.score} - ${game.homeTeam.score} ${game.homeTeam.name}\n勝者: ${getWinner(game)}`);
@@ -203,14 +214,24 @@ export default function HistoryPage() {
               <Stack gap="lg">
                 <Group justify="space-between" align="center">
                   <Title order={2}>試合一覧</Title>
-                  <Button
-                    variant="light"
-                    color="red"
-                    leftSection={<IconTrash size={16} />}
-                    onClick={clearHistory}
-                  >
-                    履歴をクリア
-                  </Button>
+                  <Group gap="md">
+                    <Button
+                      variant="light"
+                      color="red"
+                      leftSection={<IconTrash size={16} />}
+                      onClick={clearHistory}
+                    >
+                      履歴をクリア
+                    </Button>
+                    <Button
+                      variant="light"
+                      color="red"
+                      leftSection={<IconTrash size={16} />}
+                      onClick={clearAllData}
+                    >
+                      全データをクリア
+                    </Button>
+                  </Group>
                 </Group>
 
                 <Table striped highlightOnHover withTableBorder withColumnBorders>
