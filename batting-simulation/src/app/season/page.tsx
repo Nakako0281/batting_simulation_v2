@@ -1,11 +1,11 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Player, GameResult, GameStats } from '../../types/baseball';
-import { simulateInning, calculateOPS } from '../../utils/baseballSimulation';
+import { simulateInning } from '../../utils/baseballSimulation';
 import SeasonScoreboard from '../../components/SeasonScoreboard';
-import { Container, Stack, Text, Loader, Center, Paper, Title, Button, Group, Progress, Alert } from '@mantine/core';
-import { IconBallBaseball, IconRefresh, IconUserEdit, IconTrophy, IconChartBar } from '@tabler/icons-react';
+import { Container, Stack, Text, Loader, Center, Paper, Title, Button, Group, Progress, Alert, Skeleton } from '@mantine/core';
+import { IconBallBaseball, IconUserEdit } from '@tabler/icons-react';
 import { useRouter } from 'next/navigation';
 
 interface SeasonStats extends GameStats {
@@ -282,7 +282,7 @@ export default function SeasonPage() {
     saveSeasonToHistory(currentSeasonResult);
   };
 
-  const saveSeasonToHistory = (seasonResult: SeasonResult) => {
+  const saveSeasonToHistory = useCallback((seasonResult: SeasonResult) => {
     const history = JSON.parse(localStorage.getItem('seasonHistory') || '[]');
     const newSeason = {
       ...seasonResult,
@@ -294,15 +294,15 @@ export default function SeasonPage() {
     // 最新の5シーズンのみ保持
     const limitedHistory = history.slice(0, 5);
     localStorage.setItem('seasonHistory', JSON.stringify(limitedHistory));
-  };
+  }, []);
 
-  const handleNewSeason = () => {
+  const handleNewSeason = useCallback(() => {
     router.push('/home');
-  };
+  }, [router]);
 
-  const handleViewHistory = () => {
+  const handleViewHistory = useCallback(() => {
     router.push('/history');
-  };
+  }, [router]);
 
   if (isSimulating) {
     return (

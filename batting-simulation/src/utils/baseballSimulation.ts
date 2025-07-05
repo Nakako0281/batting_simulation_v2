@@ -19,7 +19,6 @@ export function simulateAtBat(player: Player): AtBatResult {
   // OPSに基づいて確率を調整
   const baseHitRate = Math.min(0.4, ops * 0.3); // 基本安打率
   const walkRate = Math.min(0.15, ops * 0.1); // 四球率
-  const extraBaseHitRate = Math.min(0.1, ops * 0.05); // 長打率
   
   const random = Math.random();
   

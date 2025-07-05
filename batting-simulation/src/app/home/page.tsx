@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Player } from '../../types/baseball';
 import {
   Container,
@@ -18,6 +18,8 @@ import {
   Box,
   Center,
   Alert,
+  Loader,
+  Skeleton,
 } from '@mantine/core';
 import { IconBallBaseball, IconUsers, IconTrophy, IconInfoCircle, IconHistory, IconChartBar } from '@tabler/icons-react';
 import { useRouter } from 'next/navigation';
@@ -43,6 +45,7 @@ export default function HomePage() {
   const [homePlayers, setHomePlayers] = useState<Player[]>([]);
   const [awayPlayers, setAwayPlayers] = useState<Player[]>([]);
   const [isDataSaved, setIsDataSaved] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   const createDefaultPlayer = (team: 'home' | 'away', position: number): Player => {
     const defaultStats = getDefaultStats();
@@ -64,7 +67,31 @@ export default function HomePage() {
 
   // コンポーネントマウント時に選手を初期化
   useEffect(() => {
-    initializePlayers();
+    const loadData = async () => {
+      setIsLoading(true);
+      
+      // ローカルストレージから保存されたデータを読み込み
+      const savedData = localStorage.getItem('playerData');
+      if (savedData) {
+        try {
+          const data = JSON.parse(savedData);
+          setHomeTeamName(data.homeTeamName || 'ホームチーム');
+          setAwayTeamName(data.awayTeamName || 'アウェイチーム');
+          setHomePlayers(data.homePlayers || []);
+          setAwayPlayers(data.awayPlayers || []);
+          setIsDataSaved(true);
+        } catch (error) {
+          console.error('保存されたデータの読み込みに失敗しました:', error);
+          initializePlayers();
+        }
+      } else {
+        initializePlayers();
+      }
+      
+      setIsLoading(false);
+    };
+    
+    loadData();
   }, []);
 
   // 選手データの保存
@@ -111,10 +138,15 @@ export default function HomePage() {
 
   // コンポーネントマウント時に保存されたデータを読み込み
   useEffect(() => {
-    loadPlayerData();
+    const loadData = async () => {
+      setIsLoading(true);
+      loadPlayerData();
+      setIsLoading(false);
+    };
+    loadData();
   }, []);
 
-  const updatePlayer = (team: 'home' | 'away', position: number, field: keyof Player, value: string | number) => {
+  const updatePlayer = useCallback((team: 'home' | 'away', position: number, field: keyof Player, value: string | number) => {
     const players = team === 'home' ? homePlayers : awayPlayers;
     const updatedPlayers = players.map(player =>
       player.position === position
@@ -127,9 +159,9 @@ export default function HomePage() {
     } else {
       setAwayPlayers(updatedPlayers);
     }
-  };
+  }, [homePlayers, awayPlayers]);
 
-  const handleSubmit = () => {
+  const handleSubmit = useCallback(() => {
     // 全選手の名前が入力されているかチェック
     const allHomePlayersFilled = homePlayers.every(p => p.name.trim() !== '');
     const allAwayPlayersFilled = awayPlayers.every(p => p.name.trim() !== '');
@@ -151,9 +183,9 @@ export default function HomePage() {
     
     // 結果ページに遷移
     router.push('/result');
-  };
+  }, [homePlayers, awayPlayers, homeTeamName, awayTeamName, router]);
 
-  const handleSeasonSubmit = () => {
+  const handleSeasonSubmit = useCallback(() => {
     // 全選手の名前が入力されているかチェック
     const allHomePlayersFilled = homePlayers.every(p => p.name.trim() !== '');
     const allAwayPlayersFilled = awayPlayers.every(p => p.name.trim() !== '');
@@ -175,9 +207,9 @@ export default function HomePage() {
     
     // シーズンページに遷移
     router.push('/season');
-  };
+  }, [homePlayers, awayPlayers, homeTeamName, awayTeamName, router]);
 
-  const handleResetData = () => {
+  const handleResetData = useCallback(() => {
     if (confirm('入力されている選手データをすべてリセットしますか？\nこの操作は取り消せません。')) {
       localStorage.removeItem('playerData');
       initializePlayers();
@@ -185,9 +217,9 @@ export default function HomePage() {
       setAwayTeamName('アウェイチーム');
       setIsDataSaved(false);
     }
-  };
+  }, []);
 
-  const renderPlayerInputs = (players: Player[], team: 'home' | 'away') => (
+  const renderPlayerInputs = useCallback((players: Player[], team: 'home' | 'away') => (
     <Stack gap="lg">
       <Center>
         <Title order={3} c={team === 'home' ? 'blue' : 'red'}>
@@ -298,7 +330,71 @@ export default function HomePage() {
         ))}
       </Grid>
     </Stack>
-  );
+  ), [homeTeamName, awayTeamName, updatePlayer]);
+
+  if (isLoading) {
+    return (
+      <Container size="xl" py="xl">
+        <Stack gap="xl">
+          <Paper shadow="xs" p="xl" radius="md" withBorder>
+            <Stack gap="xl" align="center">
+              <Center>
+                <Loader size="xl" color="blue" />
+              </Center>
+              <Stack gap="md" align="center">
+                <IconBallBaseball size={48} color="var(--mantine-color-blue-6)" />
+                <Title order={2}>データを読み込み中...</Title>
+                <Text c="dimmed" ta="center" size="lg">
+                  選手データを読み込んでいます
+                </Text>
+              </Stack>
+            </Stack>
+          </Paper>
+          
+          {/* スケルトンローディング */}
+          <Paper shadow="xs" p="xl" radius="md" withBorder>
+            <Stack gap="lg">
+              <Skeleton height={32} width="60%" radius="md" />
+              <Group justify="center" gap="xl" wrap="nowrap">
+                <Skeleton height={36} width="100%" radius="md" />
+                <Skeleton height={24} width={60} radius="md" />
+                <Skeleton height={36} width="100%" radius="md" />
+              </Group>
+            </Stack>
+          </Paper>
+          
+          <Paper shadow="xs" p="xl" radius="md" withBorder>
+            <Grid gutter="xl">
+              <Grid.Col span={{ base: 12, lg: 6 }}>
+                <Stack gap="lg">
+                  <Skeleton height={28} width="40%" radius="md" />
+                  <Grid gutter="md">
+                    {Array.from({ length: 9 }).map((_, i) => (
+                      <Grid.Col key={i} span={{ base: 12, sm: 6, lg: 6 }}>
+                        <Skeleton height={200} radius="md" />
+                      </Grid.Col>
+                    ))}
+                  </Grid>
+                </Stack>
+              </Grid.Col>
+              <Grid.Col span={{ base: 12, lg: 6 }}>
+                <Stack gap="lg">
+                  <Skeleton height={28} width="40%" radius="md" />
+                  <Grid gutter="md">
+                    {Array.from({ length: 9 }).map((_, i) => (
+                      <Grid.Col key={i} span={{ base: 12, sm: 6, lg: 6 }}>
+                        <Skeleton height={200} radius="md" />
+                      </Grid.Col>
+                    ))}
+                  </Grid>
+                </Stack>
+              </Grid.Col>
+            </Grid>
+          </Paper>
+        </Stack>
+      </Container>
+    );
+  }
 
   return (
     <Container size="xl" py="xl">

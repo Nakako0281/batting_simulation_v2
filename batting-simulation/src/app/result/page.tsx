@@ -1,10 +1,10 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Player, GameResult, GameStats } from '../../types/baseball';
 import { simulateInning } from '../../utils/baseballSimulation';
 import Scoreboard from '../../components/Scoreboard';
-import { Container, Stack, Text, Loader, Center, Paper, Title, Button, Group } from '@mantine/core';
+import { Container, Stack, Text, Loader, Center, Paper, Title, Button, Group, Skeleton, Progress } from '@mantine/core';
 import { IconBallBaseball, IconRefresh, IconUserEdit } from '@tabler/icons-react';
 import { useRouter } from 'next/navigation';
 
@@ -13,6 +13,7 @@ export default function ResultPage() {
   const [gameResult, setGameResult] = useState<GameResult | null>(null);
   const [isSimulating, setIsSimulating] = useState(false);
   const [isResimulating, setIsResimulating] = useState(false);
+  const [currentInning, setCurrentInning] = useState(0);
 
   useEffect(() => {
     // ローカルストレージから試合データを取得
@@ -29,6 +30,7 @@ export default function ResultPage() {
 
   const simulateGame = (homePlayers: Player[], awayPlayers: Player[], homeTeamName: string, awayTeamName: string) => {
     setIsSimulating(true);
+    setCurrentInning(0);
     
     // ゲーム結果の初期化
     const initialGameResult: GameResult = {
@@ -81,6 +83,8 @@ export default function ResultPage() {
 
     // 9イニングをシミュレート
     for (let inning = 0; inning < 9; inning++) {
+      setCurrentInning(inning + 1);
+      
       // アウェイチームの攻撃（表）
       const awayInningResult = simulateInning(awayPlayers, true, awayBatterIndex);
       currentGameResult.awayTeam.score += awayInningResult.runs;
@@ -130,7 +134,7 @@ export default function ResultPage() {
     saveGameToHistory(currentGameResult);
   };
 
-  const handleResimulate = () => {
+  const handleResimulate = useCallback(() => {
     setIsResimulating(true);
     
     // ローカルストレージから元の選手データを取得
@@ -144,9 +148,9 @@ export default function ResultPage() {
     const { homePlayers, awayPlayers, homeTeamName, awayTeamName } = JSON.parse(gameData);
     simulateGame(homePlayers, awayPlayers, homeTeamName, awayTeamName);
     setIsResimulating(false);
-  };
+  }, []);
 
-  const saveGameToHistory = (gameResult: GameResult) => {
+  const saveGameToHistory = useCallback((gameResult: GameResult) => {
     const history = JSON.parse(localStorage.getItem('gameHistory') || '[]');
     const newGame = {
       ...gameResult,
@@ -158,11 +162,11 @@ export default function ResultPage() {
     // 最新の10試合のみ保持
     const limitedHistory = history.slice(0, 10);
     localStorage.setItem('gameHistory', JSON.stringify(limitedHistory));
-  };
+  }, []);
 
-  const handleNewGame = () => {
+  const handleNewGame = useCallback(() => {
     router.push('/home');
-  };
+  }, [router]);
 
   if (isSimulating) {
     return (
@@ -176,7 +180,17 @@ export default function ResultPage() {
               <IconBallBaseball size={48} color="var(--mantine-color-blue-6)" />
               <Title order={2}>シミュレーション中...</Title>
               <Text c="dimmed" ta="center" size="lg">
-                試合をシミュレートしています
+                {currentInning}回目をシミュレートしています
+              </Text>
+              <Progress 
+                value={(currentInning / 9) * 100} 
+                size="xl" 
+                radius="xl" 
+                color="blue" 
+                style={{ width: '100%', maxWidth: '400px' }}
+              />
+              <Text size="sm" c="dimmed">
+                {currentInning} / 9 回完了
               </Text>
             </Stack>
           </Stack>

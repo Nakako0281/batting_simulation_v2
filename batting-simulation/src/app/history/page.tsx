@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { GameResult } from '../../types/baseball';
 import {
   Container,
@@ -16,6 +16,8 @@ import {
   Table,
   Center,
   Alert,
+  Loader,
+  Skeleton,
 } from '@mantine/core';
 import { IconBallBaseball, IconHistory, IconInfoCircle, IconHome, IconTrash } from '@tabler/icons-react';
 import { useRouter } from 'next/navigation';
@@ -46,16 +48,25 @@ export default function HistoryPage() {
   const router = useRouter();
   const [gameHistory, setGameHistory] = useState<GameHistoryItem[]>([]);
   const [seasonHistory, setSeasonHistory] = useState<SeasonHistoryItem[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // ローカルストレージから履歴を取得
-    const gameHistoryData = JSON.parse(localStorage.getItem('gameHistory') || '[]');
-    const seasonHistoryData = JSON.parse(localStorage.getItem('seasonHistory') || '[]');
-    setGameHistory(gameHistoryData);
-    setSeasonHistory(seasonHistoryData);
+    const loadHistory = async () => {
+      setIsLoading(true);
+      
+      // ローカルストレージから履歴を取得
+      const gameHistoryData = JSON.parse(localStorage.getItem('gameHistory') || '[]');
+      const seasonHistoryData = JSON.parse(localStorage.getItem('seasonHistory') || '[]');
+      setGameHistory(gameHistoryData);
+      setSeasonHistory(seasonHistoryData);
+      
+      setIsLoading(false);
+    };
+    
+    loadHistory();
   }, []);
 
-  const formatDate = (timestamp: string) => {
+  const formatDate = useCallback((timestamp: string) => {
     return new Date(timestamp).toLocaleString('ja-JP', {
       year: 'numeric',
       month: '2-digit',
@@ -63,9 +74,9 @@ export default function HistoryPage() {
       hour: '2-digit',
       minute: '2-digit'
     });
-  };
+  }, []);
 
-  const getWinner = (game: GameResult) => {
+  const getWinner = useCallback((game: GameResult) => {
     if (game.homeTeam.score > game.awayTeam.score) {
       return game.homeTeam.name;
     } else if (game.awayTeam.score > game.homeTeam.score) {
@@ -73,18 +84,18 @@ export default function HistoryPage() {
     } else {
       return '引き分け';
     }
-  };
+  }, []);
 
-  const clearHistory = () => {
+  const clearHistory = useCallback(() => {
     if (confirm('すべての試合履歴を削除しますか？')) {
       localStorage.removeItem('gameHistory');
       localStorage.removeItem('seasonHistory');
       setGameHistory([]);
       setSeasonHistory([]);
     }
-  };
+  }, []);
 
-  const clearAllData = () => {
+  const clearAllData = useCallback(() => {
     if (confirm('すべてのデータ（試合履歴、シーズン履歴、選手データ）を削除しますか？\nこの操作は取り消せません。')) {
       localStorage.removeItem('gameHistory');
       localStorage.removeItem('seasonHistory');
@@ -93,12 +104,68 @@ export default function HistoryPage() {
       setGameHistory([]);
       setSeasonHistory([]);
     }
-  };
+  }, []);
 
-  const viewGameDetails = (game: GameHistoryItem) => {
+  const viewGameDetails = useCallback((game: GameHistoryItem) => {
     // 試合詳細を表示する機能（将来的に実装可能）
     alert(`${game.awayTeam.name} ${game.awayTeam.score} - ${game.homeTeam.score} ${game.homeTeam.name}\n勝者: ${getWinner(game)}`);
-  };
+  }, [getWinner]);
+
+  // 統計計算をuseMemoで最適化
+  const maxScore = useMemo(() => {
+    if (gameHistory.length === 0) return 0;
+    return Math.max(...gameHistory.map(g => g.homeTeam.score + g.awayTeam.score));
+  }, [gameHistory]);
+
+  const averageScore = useMemo(() => {
+    if (gameHistory.length === 0) return '0.0';
+    const totalScore = gameHistory.reduce((sum, g) => sum + g.homeTeam.score + g.awayTeam.score, 0);
+    return (totalScore / gameHistory.length).toFixed(1);
+  }, [gameHistory]);
+
+  if (isLoading) {
+    return (
+      <Container size="xl" py="xl">
+        <Stack gap="xl">
+          <Paper shadow="xs" p="xl" radius="md" withBorder>
+            <Stack gap="xl" align="center">
+              <Center>
+                <Loader size="xl" color="blue" />
+              </Center>
+              <Stack gap="md" align="center">
+                <IconHistory size={48} color="var(--mantine-color-blue-6)" />
+                <Title order={2}>履歴を読み込み中...</Title>
+                <Text c="dimmed" ta="center" size="lg">
+                  試合履歴を読み込んでいます
+                </Text>
+              </Stack>
+            </Stack>
+          </Paper>
+          
+          {/* スケルトンローディング */}
+          <Paper shadow="xs" p="xl" radius="md" withBorder>
+            <Stack gap="lg">
+              <Skeleton height={32} width="60%" radius="md" />
+              <Grid gutter="md">
+                {Array.from({ length: 4 }).map((_, i) => (
+                  <Grid.Col key={i} span={{ base: 12, sm: 6, md: 3 }}>
+                    <Skeleton height={80} radius="md" />
+                  </Grid.Col>
+                ))}
+              </Grid>
+            </Stack>
+          </Paper>
+          
+          <Paper shadow="xs" p="xl" radius="md" withBorder>
+            <Stack gap="lg">
+              <Skeleton height={32} width="40%" radius="md" />
+              <Skeleton height={200} radius="md" />
+            </Stack>
+          </Paper>
+        </Stack>
+      </Container>
+    );
+  }
 
   return (
     <Container size="xl" py="xl">
@@ -190,7 +257,7 @@ export default function HistoryPage() {
                       <Stack gap="xs" align="center">
                         <Text size="sm" c="dimmed">最多得点試合</Text>
                         <Title order={4}>
-                          {gameHistory.length > 0 ? Math.max(...gameHistory.map(g => g.homeTeam.score + g.awayTeam.score)) : 0}
+                          {maxScore}
                         </Title>
                       </Stack>
                     </Card>
@@ -200,7 +267,7 @@ export default function HistoryPage() {
                       <Stack gap="xs" align="center">
                         <Text size="sm" c="dimmed">平均得点</Text>
                         <Title order={4}>
-                          {gameHistory.length > 0 ? (gameHistory.reduce((sum, g) => sum + g.homeTeam.score + g.awayTeam.score, 0) / gameHistory.length).toFixed(1) : '0.0'}
+                          {averageScore}
                         </Title>
                       </Stack>
                     </Card>

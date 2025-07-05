@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { Player, GameStats } from '../types/baseball';
 import { calculateOPS } from '../utils/baseballSimulation';
 import {
@@ -19,6 +19,7 @@ import {
   Grid,
   Center,
   Alert,
+  Skeleton,
 } from '@mantine/core';
 import {
   IconTrophy,
@@ -67,21 +68,21 @@ interface SeasonScoreboardProps {
 export default function SeasonScoreboard({ seasonResult, onNewSeason, onViewHistory }: SeasonScoreboardProps) {
   const router = useRouter();
 
-  const formatAverage = (hits: number, atBats: number): string => {
+  const formatAverage = useCallback((hits: number, atBats: number): string => {
     if (atBats === 0) return '.000';
     return (hits / atBats).toFixed(3).replace('0.', '.');
-  };
+  }, []);
 
-  const formatOPS = (player: Player & SeasonStats): string => {
+  const formatOPS = useCallback((player: Player & SeasonStats): string => {
     const ops = player.onBasePercentage + player.sluggingPercentage;
     return ops.toFixed(3);
-  };
+  }, []);
 
-  const formatPercentage = (value: number): string => {
+  const formatPercentage = useCallback((value: number): string => {
     return (value * 100).toFixed(3).replace('0.', '.');
-  };
+  }, []);
 
-  const getWinner = () => {
+  const getWinner = useMemo(() => {
     const homeWinRate = seasonResult.homeTeam.wins / 143;
     const awayWinRate = seasonResult.awayTeam.wins / 143;
     
@@ -92,9 +93,9 @@ export default function SeasonScoreboard({ seasonResult, onNewSeason, onViewHist
     } else {
       return '引き分け';
     }
-  };
+  }, [seasonResult.homeTeam.wins, seasonResult.awayTeam.wins, seasonResult.homeTeam.name, seasonResult.awayTeam.name]);
 
-  const getWinnerColor = () => {
+  const getWinnerColor = useMemo(() => {
     const homeWinRate = seasonResult.homeTeam.wins / 143;
     const awayWinRate = seasonResult.awayTeam.wins / 143;
     
@@ -105,7 +106,7 @@ export default function SeasonScoreboard({ seasonResult, onNewSeason, onViewHist
     } else {
       return 'gray';
     }
-  };
+  }, [seasonResult.homeTeam.wins, seasonResult.awayTeam.wins]);
 
   const renderSeasonStandings = () => (
     <Card shadow="sm" padding="lg" radius="md" withBorder>
@@ -154,16 +155,16 @@ export default function SeasonScoreboard({ seasonResult, onNewSeason, onViewHist
       </Box>
 
       <Box mt="lg">
-        <Alert
-          title="シーズン結果"
-          color={getWinnerColor()}
-          variant="light"
-          icon={<IconTrophy size={16} />}
-        >
-          <Text fw={600} size="lg">
-            優勝: {getWinner()}
-          </Text>
-        </Alert>
+                  <Alert
+            title="シーズン結果"
+            color={getWinnerColor}
+            variant="light"
+            icon={<IconTrophy size={16} />}
+          >
+            <Text fw={600} size="lg">
+              優勝: {getWinner}
+            </Text>
+          </Alert>
       </Box>
     </Card>
   );

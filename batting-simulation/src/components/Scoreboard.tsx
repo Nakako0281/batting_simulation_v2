@@ -20,9 +20,11 @@ import {
   Divider,
   Alert,
   Loader,
+  Skeleton,
+  Progress,
 } from '@mantine/core';
 import { IconTrophy, IconRefresh, IconChartBar, IconUsers, IconHome, IconHistory, IconInfoCircle, IconUserEdit } from '@tabler/icons-react';
-import { useState } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 
 interface ScoreboardProps {
@@ -35,17 +37,17 @@ export default function Scoreboard({ gameResult, onNewGame }: ScoreboardProps) {
   const [isResimulating, setIsResimulating] = useState(false);
   const [currentGameResult, setCurrentGameResult] = useState<GameResult>(gameResult);
 
-  const formatAverage = (hits: number, atBats: number): string => {
+  const formatAverage = useCallback((hits: number, atBats: number): string => {
     if (atBats === 0) return '.000';
     return (hits / atBats).toFixed(3).replace('0.', '.');
-  };
+  }, []);
 
-  const formatOPS = (player: Player & GameStats): string => {
+  const formatOPS = useCallback((player: Player & GameStats): string => {
     const ops = calculateOPS(player);
     return ops.toFixed(3);
-  };
+  }, []);
 
-  const handleResimulate = () => {
+  const handleResimulate = useCallback(() => {
     setIsResimulating(true);
     
     // ローカルストレージから元の選手データを取得
@@ -156,9 +158,9 @@ export default function Scoreboard({ gameResult, onNewGame }: ScoreboardProps) {
 
     // 試合結果を履歴に保存
     saveGameToHistory(newGameResult);
-  };
+  }, []);
 
-  const saveGameToHistory = (gameResult: GameResult) => {
+  const saveGameToHistory = useCallback((gameResult: GameResult) => {
     const history = JSON.parse(localStorage.getItem('gameHistory') || '[]');
     const newGame = {
       ...gameResult,
@@ -170,11 +172,11 @@ export default function Scoreboard({ gameResult, onNewGame }: ScoreboardProps) {
     // 最新の10試合のみ保持
     const limitedHistory = history.slice(0, 10);
     localStorage.setItem('gameHistory', JSON.stringify(limitedHistory));
-  };
+  }, []);
 
-  const handleChangeMembers = () => {
+  const handleChangeMembers = useCallback(() => {
     router.push('/home');
-  };
+  }, [router]);
 
   const renderPlayerStats = (players: (Player & GameStats)[], teamName: string, teamColor: string) => (
     <Card shadow="sm" padding="lg" radius="md" withBorder>
@@ -267,7 +269,7 @@ export default function Scoreboard({ gameResult, onNewGame }: ScoreboardProps) {
     </Card>
   );
 
-  const getWinner = () => {
+  const getWinner = useMemo(() => {
     if (currentGameResult.homeTeam.score > currentGameResult.awayTeam.score) {
       return currentGameResult.homeTeam.name;
     } else if (currentGameResult.awayTeam.score > currentGameResult.homeTeam.score) {
@@ -275,9 +277,9 @@ export default function Scoreboard({ gameResult, onNewGame }: ScoreboardProps) {
     } else {
       return '引き分け';
     }
-  };
+  }, [currentGameResult.homeTeam.score, currentGameResult.awayTeam.score, currentGameResult.homeTeam.name, currentGameResult.awayTeam.name]);
 
-  const getWinnerColor = () => {
+  const getWinnerColor = useMemo(() => {
     if (currentGameResult.homeTeam.score > currentGameResult.awayTeam.score) {
       return 'red';
     } else if (currentGameResult.awayTeam.score > currentGameResult.homeTeam.score) {
@@ -285,7 +287,7 @@ export default function Scoreboard({ gameResult, onNewGame }: ScoreboardProps) {
     } else {
       return 'gray';
     }
-  };
+  }, [currentGameResult.homeTeam.score, currentGameResult.awayTeam.score]);
 
   if (isResimulating) {
     return (
@@ -301,6 +303,14 @@ export default function Scoreboard({ gameResult, onNewGame }: ScoreboardProps) {
               <Text c="dimmed" ta="center" size="lg">
                 同じメンバーで再度シミュレートしています
               </Text>
+              <Progress 
+                value={50} 
+                size="xl" 
+                radius="xl" 
+                color="blue" 
+                style={{ width: '100%', maxWidth: '400px' }}
+                animated
+              />
             </Stack>
           </Stack>
         </Paper>
@@ -333,9 +343,9 @@ export default function Scoreboard({ gameResult, onNewGame }: ScoreboardProps) {
                 </Title>
                 <Group gap="sm">
                   <IconTrophy size={24} />
-                  <Text size="xl" fw={700}>
-                    勝者: {getWinner()}
-                  </Text>
+                                  <Text size="xl" fw={700}>
+                  勝者: {getWinner}
+                </Text>
                 </Group>
               </Stack>
             </Card>
