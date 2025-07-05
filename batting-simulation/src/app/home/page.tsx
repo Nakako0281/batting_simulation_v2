@@ -455,46 +455,7 @@ export default function HomePage() {
           </Paper>
         )}
 
-        {/* チーム名入力 */}
-        <Paper shadow="xs" p="xl" radius="md" withBorder>
-          <Stack gap="lg">
-            <Title order={2} ta="center">チーム設定</Title>
-            <Group justify="center" gap="xl" wrap="nowrap">
-              <TextInput
-                label="ホームチーム名"
-                placeholder="ホームチーム"
-                value={homeTeamName}
-                onChange={(e) => setHomeTeamName(e.target.value)}
-                style={{ flex: 1 }}
-              />
-              <Box ta="center" pt={28}>
-                <Badge size="lg" variant="light">
-                  VS
-                </Badge>
-              </Box>
-              <TextInput
-                label="アウェイチーム名"
-                placeholder="アウェイチーム"
-                value={awayTeamName}
-                onChange={(e) => setAwayTeamName(e.target.value)}
-                style={{ flex: 1 }}
-              />
-            </Group>
-          </Stack>
-        </Paper>
-
-        {/* 選手入力フォーム */}
-        <Paper shadow="xs" p="xl" radius="md" withBorder>
-          <Grid gutter="xl">
-            <Grid.Col span={{ base: 12, lg: 6 }}>
-              {renderPlayerInputs(homePlayers, 'home')}
-            </Grid.Col>
-            <Grid.Col span={{ base: 12, lg: 6 }}>
-              {renderPlayerInputs(awayPlayers, 'away')}
-            </Grid.Col>
-          </Grid>
-        </Paper>
-
+        {/* 試合開始ボタン */}
         <Paper shadow="xs" p="xl" radius="md" withBorder>
           <Center>
             <Stack gap="md" align="center">
@@ -536,6 +497,46 @@ export default function HomePage() {
               </Group>
             </Stack>
           </Center>
+        </Paper>
+        
+        {/* チーム名入力 */}
+        <Paper shadow="xs" p="xl" radius="md" withBorder>
+          <Stack gap="lg">
+            <Title order={2} ta="center">チーム設定</Title>
+            <Group justify="center" gap="xl" wrap="nowrap">
+              <TextInput
+                label="ホームチーム名"
+                placeholder="ホームチーム"
+                value={homeTeamName}
+                onChange={(e) => setHomeTeamName(e.target.value)}
+                style={{ flex: 1 }}
+              />
+              <Box ta="center" pt={28}>
+                <Badge size="lg" variant="light">
+                  VS
+                </Badge>
+              </Box>
+              <TextInput
+                label="アウェイチーム名"
+                placeholder="アウェイチーム"
+                value={awayTeamName}
+                onChange={(e) => setAwayTeamName(e.target.value)}
+                style={{ flex: 1 }}
+              />
+            </Group>
+          </Stack>
+        </Paper>
+
+        {/* 選手入力フォーム */}
+        <Paper shadow="xs" p="xl" radius="md" withBorder>
+          <Grid gutter="xl">
+            <Grid.Col span={{ base: 12, lg: 6 }}>
+              {renderPlayerInputs(homePlayers, 'home')}
+            </Grid.Col>
+            <Grid.Col span={{ base: 12, lg: 6 }}>
+              {renderPlayerInputs(awayPlayers, 'away')}
+            </Grid.Col>
+          </Grid>
         </Paper>
       </Stack>
     </Container>
