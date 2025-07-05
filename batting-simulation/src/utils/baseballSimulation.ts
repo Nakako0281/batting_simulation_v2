@@ -47,7 +47,11 @@ export function simulateAtBat(player: Player): AtBatResult {
 }
 
 // イニングをシミュレートする関数
-export function simulateInning(batters: Player[], isTop: boolean): { runs: number; gameStats: GameStats[] } {
+export function simulateInning(batters: Player[], isTop: boolean, startBatterIndex: number = 0): { 
+  runs: number; 
+  gameStats: GameStats[]; 
+  nextBatterIndex: number 
+} {
   const gameStats: GameStats[] = batters.map(player => ({
     atBats: 0,
     hits: 0,
@@ -64,7 +68,7 @@ export function simulateInning(batters: Player[], isTop: boolean): { runs: numbe
   let runs = 0;
   let outs = 0;
   let bases = [false, false, false]; // 1塁、2塁、3塁
-  let currentBatterIndex = 0;
+  let currentBatterIndex = startBatterIndex;
 
   while (outs < 3) {
     const currentBatter = batters[currentBatterIndex];
@@ -190,5 +194,5 @@ export function simulateInning(batters: Player[], isTop: boolean): { runs: numbe
     currentBatterIndex = (currentBatterIndex + 1) % batters.length;
   }
   
-  return { runs, gameStats };
+  return { runs, gameStats, nextBatterIndex: currentBatterIndex };
 } 

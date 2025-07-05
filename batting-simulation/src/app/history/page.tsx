@@ -25,14 +25,34 @@ interface GameHistoryItem extends GameResult {
   timestamp: string;
 }
 
+interface SeasonHistoryItem {
+  id: string;
+  timestamp: string;
+  homeTeam: {
+    name: string;
+    wins: number;
+    losses: number;
+    ties: number;
+  };
+  awayTeam: {
+    name: string;
+    wins: number;
+    losses: number;
+    ties: number;
+  };
+}
+
 export default function HistoryPage() {
   const router = useRouter();
   const [gameHistory, setGameHistory] = useState<GameHistoryItem[]>([]);
+  const [seasonHistory, setSeasonHistory] = useState<SeasonHistoryItem[]>([]);
 
   useEffect(() => {
     // ローカルストレージから履歴を取得
-    const history = JSON.parse(localStorage.getItem('gameHistory') || '[]');
-    setGameHistory(history);
+    const gameHistoryData = JSON.parse(localStorage.getItem('gameHistory') || '[]');
+    const seasonHistoryData = JSON.parse(localStorage.getItem('seasonHistory') || '[]');
+    setGameHistory(gameHistoryData);
+    setSeasonHistory(seasonHistoryData);
   }, []);
 
   const formatDate = (timestamp: string) => {
@@ -58,7 +78,9 @@ export default function HistoryPage() {
   const clearHistory = () => {
     if (confirm('すべての試合履歴を削除しますか？')) {
       localStorage.removeItem('gameHistory');
+      localStorage.removeItem('seasonHistory');
       setGameHistory([]);
+      setSeasonHistory([]);
     }
   };
 
@@ -109,14 +131,14 @@ export default function HistoryPage() {
         </Paper>
 
         {/* 履歴がない場合 */}
-        {gameHistory.length === 0 ? (
+        {gameHistory.length === 0 && seasonHistory.length === 0 ? (
           <Paper shadow="xs" p="xl" radius="md" withBorder>
             <Center>
               <Stack gap="md" align="center">
                 <IconHistory size={48} color="var(--mantine-color-gray-4)" />
-                <Title order={2}>試合履歴がありません</Title>
+                <Title order={2}>履歴がありません</Title>
                 <Text c="dimmed" ta="center">
-                  まだ試合を実行していません。新しい試合を開始して履歴を作成しましょう。
+                  まだ試合やシーズンを実行していません。新しい試合を開始して履歴を作成しましょう。
                 </Text>
                 <Button
                   size="lg"
@@ -147,19 +169,17 @@ export default function HistoryPage() {
                   <Grid.Col span={{ base: 12, sm: 6, md: 3 }}>
                     <Card shadow="xs" padding="md" radius="md" withBorder>
                       <Stack gap="xs" align="center">
-                        <Text size="sm" c="dimmed">最多得点試合</Text>
-                        <Title order={4}>
-                          {Math.max(...gameHistory.map(g => g.homeTeam.score + g.awayTeam.score))}
-                        </Title>
+                        <Text size="sm" c="dimmed">シーズン数</Text>
+                        <Title order={4}>{seasonHistory.length}</Title>
                       </Stack>
                     </Card>
                   </Grid.Col>
                   <Grid.Col span={{ base: 12, sm: 6, md: 3 }}>
                     <Card shadow="xs" padding="md" radius="md" withBorder>
                       <Stack gap="xs" align="center">
-                        <Text size="sm" c="dimmed">最少得点試合</Text>
+                        <Text size="sm" c="dimmed">最多得点試合</Text>
                         <Title order={4}>
-                          {Math.min(...gameHistory.map(g => g.homeTeam.score + g.awayTeam.score))}
+                          {gameHistory.length > 0 ? Math.max(...gameHistory.map(g => g.homeTeam.score + g.awayTeam.score)) : 0}
                         </Title>
                       </Stack>
                     </Card>
@@ -169,7 +189,7 @@ export default function HistoryPage() {
                       <Stack gap="xs" align="center">
                         <Text size="sm" c="dimmed">平均得点</Text>
                         <Title order={4}>
-                          {(gameHistory.reduce((sum, g) => sum + g.homeTeam.score + g.awayTeam.score, 0) / gameHistory.length).toFixed(1)}
+                          {gameHistory.length > 0 ? (gameHistory.reduce((sum, g) => sum + g.homeTeam.score + g.awayTeam.score, 0) / gameHistory.length).toFixed(1) : '0.0'}
                         </Title>
                       </Stack>
                     </Card>
@@ -238,6 +258,64 @@ export default function HistoryPage() {
               </Stack>
             </Paper>
 
+            {/* シーズン履歴がある場合 */}
+            {seasonHistory.length > 0 && (
+              <Paper shadow="xs" p="xl" radius="md" withBorder>
+                <Stack gap="lg">
+                  <Title order={2}>シーズン履歴</Title>
+                  <Table striped highlightOnHover withTableBorder withColumnBorders>
+                    <Table.Thead>
+                      <Table.Tr>
+                        <Table.Th>日時</Table.Th>
+                        <Table.Th ta="center">ホームチーム</Table.Th>
+                        <Table.Th ta="center">成績</Table.Th>
+                        <Table.Th ta="center">アウェイチーム</Table.Th>
+                        <Table.Th ta="center">成績</Table.Th>
+                        <Table.Th ta="center">優勝</Table.Th>
+                      </Table.Tr>
+                    </Table.Thead>
+                    <Table.Tbody>
+                      {seasonHistory.map((season) => {
+                        const homeWinRate = (season.homeTeam.wins / 143) * 100;
+                        const awayWinRate = (season.awayTeam.wins / 143) * 100;
+                        const winner = homeWinRate > awayWinRate ? season.homeTeam.name : 
+                                     awayWinRate > homeWinRate ? season.awayTeam.name : '引き分け';
+                        const winnerColor = homeWinRate > awayWinRate ? 'red' : 
+                                          awayWinRate > homeWinRate ? 'blue' : 'gray';
+                        
+                        return (
+                          <Table.Tr key={season.id}>
+                            <Table.Td>{formatDate(season.timestamp)}</Table.Td>
+                            <Table.Td ta="center" fw={500}>{season.homeTeam.name}</Table.Td>
+                            <Table.Td ta="center">
+                              {season.homeTeam.wins}勝{season.homeTeam.losses}敗{season.homeTeam.ties}分
+                              <br />
+                              <Text size="sm" c="dimmed">
+                                ({homeWinRate.toFixed(1)}%)
+                              </Text>
+                            </Table.Td>
+                            <Table.Td ta="center" fw={500}>{season.awayTeam.name}</Table.Td>
+                            <Table.Td ta="center">
+                              {season.awayTeam.wins}勝{season.awayTeam.losses}敗{season.awayTeam.ties}分
+                              <br />
+                              <Text size="sm" c="dimmed">
+                                ({awayWinRate.toFixed(1)}%)
+                              </Text>
+                            </Table.Td>
+                            <Table.Td ta="center">
+                              <Badge color={winnerColor} variant="light">
+                                {winner}
+                              </Badge>
+                            </Table.Td>
+                          </Table.Tr>
+                        );
+                      })}
+                    </Table.Tbody>
+                  </Table>
+                </Stack>
+              </Paper>
+            )}
+
             {/* 注意事項 */}
             <Alert
               title="履歴について"
@@ -245,9 +323,9 @@ export default function HistoryPage() {
               variant="light"
               icon={<IconInfoCircle size={16} />}
             >
-              試合履歴はブラウザのローカルストレージに保存されています。
+              試合履歴とシーズン履歴はブラウザのローカルストレージに保存されています。
               ブラウザのデータを削除すると履歴も失われます。
-              最新の10試合のみが保存されます。
+              最新の10試合と5シーズンのみが保存されます。
             </Alert>
           </>
         )}

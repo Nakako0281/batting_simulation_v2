@@ -19,7 +19,7 @@ import {
   Center,
   Alert,
 } from '@mantine/core';
-import { IconBallBaseball, IconUsers, IconTrophy, IconInfoCircle, IconHistory } from '@tabler/icons-react';
+import { IconBallBaseball, IconUsers, IconTrophy, IconInfoCircle, IconHistory, IconChartBar } from '@tabler/icons-react';
 import { useRouter } from 'next/navigation';
 
 // OPS 0.700程度の成績データ（実在選手を参考）
@@ -103,6 +103,30 @@ export default function HomePage() {
     
     // 結果ページに遷移
     router.push('/result');
+  };
+
+  const handleSeasonSubmit = () => {
+    // 全選手の名前が入力されているかチェック
+    const allHomePlayersFilled = homePlayers.every(p => p.name.trim() !== '');
+    const allAwayPlayersFilled = awayPlayers.every(p => p.name.trim() !== '');
+    
+    if (!allHomePlayersFilled || !allAwayPlayersFilled) {
+      alert('全選手の名前を入力してください');
+      return;
+    }
+    
+    // 試合データをローカルストレージに保存
+    const gameData = {
+      homePlayers,
+      awayPlayers,
+      homeTeamName,
+      awayTeamName,
+      timestamp: new Date().toISOString()
+    };
+    localStorage.setItem('currentGame', JSON.stringify(gameData));
+    
+    // シーズンページに遷移
+    router.push('/season');
   };
 
   const renderPlayerInputs = (players: Player[], team: 'home' | 'away') => (
@@ -313,14 +337,24 @@ export default function HomePage() {
               >
                 全選手の名前が入力されていることを確認してください
               </Alert>
-              <Button
-                size="xl"
-                leftSection={<IconTrophy size={24} />}
-                onClick={handleSubmit}
-                color="green"
-              >
-                試合開始
-              </Button>
+              <Group gap="lg">
+                <Button
+                  size="xl"
+                  leftSection={<IconTrophy size={24} />}
+                  onClick={handleSubmit}
+                  color="green"
+                >
+                  試合開始
+                </Button>
+                <Button
+                  size="xl"
+                  leftSection={<IconChartBar size={24} />}
+                  onClick={handleSeasonSubmit}
+                  color="blue"
+                >
+                  143試合をシミュレーション
+                </Button>
+              </Group>
             </Stack>
           </Center>
         </Paper>

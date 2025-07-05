@@ -74,13 +74,18 @@ export default function ResultPage() {
     };
 
     let currentGameResult = { ...initialGameResult };
+    
+    // 打者順序を管理する変数
+    let awayBatterIndex = 0;
+    let homeBatterIndex = 0;
 
     // 9イニングをシミュレート
     for (let inning = 0; inning < 9; inning++) {
       // アウェイチームの攻撃（表）
-      const awayInningResult = simulateInning(awayPlayers, true);
+      const awayInningResult = simulateInning(awayPlayers, true, awayBatterIndex);
       currentGameResult.awayTeam.score += awayInningResult.runs;
       currentGameResult.innings.away[inning] = awayInningResult.runs;
+      awayBatterIndex = awayInningResult.nextBatterIndex;
       
       // アウェイチームの選手統計を更新
       currentGameResult.awayTeam.players = currentGameResult.awayTeam.players.map((player, index) => ({
@@ -97,9 +102,10 @@ export default function ResultPage() {
       }));
 
       // ホームチームの攻撃（裏）
-      const homeInningResult = simulateInning(homePlayers, false);
+      const homeInningResult = simulateInning(homePlayers, false, homeBatterIndex);
       currentGameResult.homeTeam.score += homeInningResult.runs;
       currentGameResult.innings.home[inning] = homeInningResult.runs;
+      homeBatterIndex = homeInningResult.nextBatterIndex;
       
       // ホームチームの選手統計を更新
       currentGameResult.homeTeam.players = currentGameResult.homeTeam.players.map((player, index) => ({
