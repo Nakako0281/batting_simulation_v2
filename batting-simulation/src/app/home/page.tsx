@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Player } from '../types/baseball';
+import { Player } from '../../types/baseball';
 import {
   Container,
   Title,
@@ -15,16 +15,12 @@ import {
   Grid,
   Paper,
   Badge,
-  Divider,
   Box,
-    Center,
+  Center,
   Alert,
 } from '@mantine/core';
-import { IconBallBaseball, IconUsers, IconTrophy, IconInfoCircle } from '@tabler/icons-react';
-
-interface PlayerInputFormProps {
-  onPlayersSet: (homePlayers: Player[], awayPlayers: Player[]) => void;
-}
+import { IconBallBaseball, IconUsers, IconTrophy, IconInfoCircle, IconHistory } from '@tabler/icons-react';
+import { useRouter } from 'next/navigation';
 
 // OPS 0.700程度の成績データ（実在選手を参考）
 const getDefaultStats = (): { atBats: number; hits: number; doubles: number; triples: number; homeRuns: number; walks: number; hitByPitch: number; sacrificeFlies: number } => {
@@ -40,7 +36,8 @@ const getDefaultStats = (): { atBats: number; hits: number; doubles: number; tri
   };
 };
 
-export default function PlayerInputForm({ onPlayersSet }: PlayerInputFormProps) {
+export default function HomePage() {
+  const router = useRouter();
   const [homeTeamName, setHomeTeamName] = useState('ホームチーム');
   const [awayTeamName, setAwayTeamName] = useState('アウェイチーム');
   const [homePlayers, setHomePlayers] = useState<Player[]>([]);
@@ -94,7 +91,18 @@ export default function PlayerInputForm({ onPlayersSet }: PlayerInputFormProps) 
       return;
     }
     
-    onPlayersSet(homePlayers, awayPlayers);
+    // 試合データをローカルストレージに保存
+    const gameData = {
+      homePlayers,
+      awayPlayers,
+      homeTeamName,
+      awayTeamName,
+      timestamp: new Date().toISOString()
+    };
+    localStorage.setItem('currentGame', JSON.stringify(gameData));
+    
+    // 結果ページに遷移
+    router.push('/result');
   };
 
   const renderPlayerInputs = (players: Player[], team: 'home' | 'away') => (
@@ -230,7 +238,7 @@ export default function PlayerInputForm({ onPlayersSet }: PlayerInputFormProps) 
             {/* ナビゲーションリンク */}
             <Group gap="md" mt="md">
               <Badge size="lg" variant="light" color="blue">
-                <a href="/" style={{ textDecoration: 'none', color: 'inherit' }}>
+                <a href="/home" style={{ textDecoration: 'none', color: 'inherit' }}>
                   ホーム
                 </a>
               </Badge>
@@ -242,42 +250,18 @@ export default function PlayerInputForm({ onPlayersSet }: PlayerInputFormProps) 
                   </Group>
                 </a>
               </Badge>
+              <Badge size="lg" variant="light" color="gray">
+                <a href="/history" style={{ textDecoration: 'none', color: 'inherit' }}>
+                  <Group gap="xs">
+                    <IconHistory size={16} />
+                    試合履歴
+                  </Group>
+                </a>
+              </Badge>
             </Group>
           </Stack>
         </Paper>
-        <Paper shadow="xs" p="xl" radius="md" withBorder>
-          <Center>
-            <Stack gap="md" align="center">
-              <Alert
-                title="入力確認"
-                color="blue"
-                variant="light"
-                icon={<IconBallBaseball size={16} />}
-              >
-                全選手の名前が入力されていることを確認してください
-              </Alert>
-              <Button
-                size="xl"
-                leftSection={<IconTrophy size={24} />}
-                onClick={handleSubmit}
-                color="green"
-              >
-                試合開始
-              </Button>
-            </Stack>
-          </Center>
-        </Paper>
-        {/* 選手入力フォーム */}
-        <Paper shadow="xs" p="xl" radius="md" withBorder>
-          <Grid gutter="xl">
-            <Grid.Col span={{ base: 12, lg: 6 }}>
-              {renderPlayerInputs(homePlayers, 'home')}
-            </Grid.Col>
-            <Grid.Col span={{ base: 12, lg: 6 }}>
-              {renderPlayerInputs(awayPlayers, 'away')}
-            </Grid.Col>
-          </Grid>
-        </Paper>
+
         {/* チーム名入力 */}
         <Paper shadow="xs" p="xl" radius="md" withBorder>
           <Stack gap="lg">
@@ -304,6 +288,41 @@ export default function PlayerInputForm({ onPlayersSet }: PlayerInputFormProps) 
               />
             </Group>
           </Stack>
+        </Paper>
+
+        {/* 選手入力フォーム */}
+        <Paper shadow="xs" p="xl" radius="md" withBorder>
+          <Grid gutter="xl">
+            <Grid.Col span={{ base: 12, lg: 6 }}>
+              {renderPlayerInputs(homePlayers, 'home')}
+            </Grid.Col>
+            <Grid.Col span={{ base: 12, lg: 6 }}>
+              {renderPlayerInputs(awayPlayers, 'away')}
+            </Grid.Col>
+          </Grid>
+        </Paper>
+
+        <Paper shadow="xs" p="xl" radius="md" withBorder>
+          <Center>
+            <Stack gap="md" align="center">
+              <Alert
+                title="入力確認"
+                color="blue"
+                variant="light"
+                icon={<IconBallBaseball size={16} />}
+              >
+                全選手の名前が入力されていることを確認してください
+              </Alert>
+              <Button
+                size="xl"
+                leftSection={<IconTrophy size={24} />}
+                onClick={handleSubmit}
+                color="green"
+              >
+                試合開始
+              </Button>
+            </Stack>
+          </Center>
         </Paper>
       </Stack>
     </Container>

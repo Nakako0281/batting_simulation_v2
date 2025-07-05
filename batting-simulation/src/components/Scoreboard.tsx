@@ -2,6 +2,7 @@
 
 import { GameResult, Player, GameStats } from '../types/baseball';
 import { calculateOPS } from '../utils/baseballSimulation';
+import { simulateInning } from '../utils/baseballSimulation';
 import {
   Container,
   Title,
@@ -18,8 +19,11 @@ import {
   Grid,
   Divider,
   Alert,
+  Loader,
 } from '@mantine/core';
-import { IconTrophy, IconRefresh, IconChartBar, IconUsers } from '@tabler/icons-react';
+import { IconTrophy, IconRefresh, IconChartBar, IconUsers, IconHome, IconHistory, IconInfoCircle, IconUserEdit } from '@tabler/icons-react';
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 
 interface ScoreboardProps {
   gameResult: GameResult;
@@ -27,6 +31,10 @@ interface ScoreboardProps {
 }
 
 export default function Scoreboard({ gameResult, onNewGame }: ScoreboardProps) {
+  const router = useRouter();
+  const [isResimulating, setIsResimulating] = useState(false);
+  const [currentGameResult, setCurrentGameResult] = useState<GameResult>(gameResult);
+
   const formatAverage = (hits: number, atBats: number): string => {
     if (atBats === 0) return '.000';
     return (hits / atBats).toFixed(3).replace('0.', '.');
@@ -35,6 +43,131 @@ export default function Scoreboard({ gameResult, onNewGame }: ScoreboardProps) {
   const formatOPS = (player: Player & GameStats): string => {
     const ops = calculateOPS(player);
     return ops.toFixed(3);
+  };
+
+  const handleResimulate = () => {
+    setIsResimulating(true);
+    
+    // ローカルストレージから元の選手データを取得
+    const gameData = localStorage.getItem('currentGame');
+    if (!gameData) {
+      alert('元の選手データが見つかりません');
+      setIsResimulating(false);
+      return;
+    }
+
+    const { homePlayers, awayPlayers, homeTeamName, awayTeamName } = JSON.parse(gameData);
+    
+    // ゲーム結果の初期化
+    const initialGameResult: GameResult = {
+      homeTeam: {
+        name: homeTeamName,
+        score: 0,
+        players: homePlayers.map((player: Player) => ({
+          ...player,
+          atBats: 0,
+          hits: 0,
+          doubles: 0,
+          triples: 0,
+          homeRuns: 0,
+          walks: 0,
+          hitByPitch: 0,
+          sacrificeFlies: 0,
+          runs: 0,
+          rbis: 0
+        }))
+      },
+      awayTeam: {
+        name: awayTeamName,
+        score: 0,
+        players: awayPlayers.map((player: Player) => ({
+          ...player,
+          atBats: 0,
+          hits: 0,
+          doubles: 0,
+          triples: 0,
+          homeRuns: 0,
+          walks: 0,
+          hitByPitch: 0,
+          sacrificeFlies: 0,
+          runs: 0,
+          rbis: 0
+        }))
+      },
+      innings: {
+        home: Array(9).fill(0),
+        away: Array(9).fill(0)
+      },
+      isComplete: false
+    };
+
+    let newGameResult = { ...initialGameResult };
+
+    // 9イニングをシミュレート
+    for (let inning = 0; inning < 9; inning++) {
+      // アウェイチームの攻撃（表）
+      const awayInningResult = simulateInning(awayPlayers, true);
+      newGameResult.awayTeam.score += awayInningResult.runs;
+      newGameResult.innings.away[inning] = awayInningResult.runs;
+      
+      // アウェイチームの選手統計を更新
+      newGameResult.awayTeam.players = newGameResult.awayTeam.players.map((player, index) => ({
+        ...player,
+        atBats: player.atBats + awayInningResult.gameStats[index].atBats,
+        hits: player.hits + awayInningResult.gameStats[index].hits,
+        doubles: player.doubles + awayInningResult.gameStats[index].doubles,
+        triples: player.triples + awayInningResult.gameStats[index].triples,
+        homeRuns: player.homeRuns + awayInningResult.gameStats[index].homeRuns,
+        walks: player.walks + awayInningResult.gameStats[index].walks,
+        hitByPitch: player.hitByPitch + awayInningResult.gameStats[index].hitByPitch,
+        sacrificeFlies: player.sacrificeFlies + awayInningResult.gameStats[index].sacrificeFlies,
+        rbis: player.rbis + awayInningResult.gameStats[index].rbis
+      }));
+
+      // ホームチームの攻撃（裏）
+      const homeInningResult = simulateInning(homePlayers, false);
+      newGameResult.homeTeam.score += homeInningResult.runs;
+      newGameResult.innings.home[inning] = homeInningResult.runs;
+      
+      // ホームチームの選手統計を更新
+      newGameResult.homeTeam.players = newGameResult.homeTeam.players.map((player, index) => ({
+        ...player,
+        atBats: player.atBats + homeInningResult.gameStats[index].atBats,
+        hits: player.hits + homeInningResult.gameStats[index].hits,
+        doubles: player.doubles + homeInningResult.gameStats[index].doubles,
+        triples: player.triples + homeInningResult.gameStats[index].triples,
+        homeRuns: player.homeRuns + homeInningResult.gameStats[index].homeRuns,
+        walks: player.walks + homeInningResult.gameStats[index].walks,
+        hitByPitch: player.hitByPitch + homeInningResult.gameStats[index].hitByPitch,
+        sacrificeFlies: player.sacrificeFlies + homeInningResult.gameStats[index].sacrificeFlies,
+        rbis: player.rbis + homeInningResult.gameStats[index].rbis
+      }));
+    }
+
+    newGameResult.isComplete = true;
+    setCurrentGameResult(newGameResult);
+    setIsResimulating(false);
+
+    // 試合結果を履歴に保存
+    saveGameToHistory(newGameResult);
+  };
+
+  const saveGameToHistory = (gameResult: GameResult) => {
+    const history = JSON.parse(localStorage.getItem('gameHistory') || '[]');
+    const newGame = {
+      ...gameResult,
+      id: Date.now().toString(),
+      timestamp: new Date().toISOString()
+    };
+    history.unshift(newGame); // 最新の試合を先頭に追加
+    
+    // 最新の10試合のみ保持
+    const limitedHistory = history.slice(0, 10);
+    localStorage.setItem('gameHistory', JSON.stringify(limitedHistory));
+  };
+
+  const handleChangeMembers = () => {
+    router.push('/home');
   };
 
   const renderPlayerStats = (players: (Player & GameStats)[], teamName: string, teamColor: string) => (
@@ -109,18 +242,18 @@ export default function Scoreboard({ gameResult, onNewGame }: ScoreboardProps) {
           </Table.Thead>
           <Table.Tbody>
             <Table.Tr>
-              <Table.Td fw={600}>{gameResult.awayTeam.name}</Table.Td>
-              {gameResult.innings.away.map((score, index) => (
+              <Table.Td fw={600}>{currentGameResult.awayTeam.name}</Table.Td>
+              {currentGameResult.innings.away.map((score, index) => (
                 <Table.Td key={index} ta="center">{score}</Table.Td>
               ))}
-              <Table.Td ta="center" fw={700} c="blue">{gameResult.awayTeam.score}</Table.Td>
+              <Table.Td ta="center" fw={700} c="blue">{currentGameResult.awayTeam.score}</Table.Td>
             </Table.Tr>
             <Table.Tr>
-              <Table.Td fw={600}>{gameResult.homeTeam.name}</Table.Td>
-              {gameResult.innings.home.map((score, index) => (
+              <Table.Td fw={600}>{currentGameResult.homeTeam.name}</Table.Td>
+              {currentGameResult.innings.home.map((score, index) => (
                 <Table.Td key={index} ta="center">{score}</Table.Td>
               ))}
-              <Table.Td ta="center" fw={700} c="red">{gameResult.homeTeam.score}</Table.Td>
+              <Table.Td ta="center" fw={700} c="red">{currentGameResult.homeTeam.score}</Table.Td>
             </Table.Tr>
           </Table.Tbody>
         </Table>
@@ -129,24 +262,45 @@ export default function Scoreboard({ gameResult, onNewGame }: ScoreboardProps) {
   );
 
   const getWinner = () => {
-    if (gameResult.homeTeam.score > gameResult.awayTeam.score) {
-      return gameResult.homeTeam.name;
-    } else if (gameResult.awayTeam.score > gameResult.homeTeam.score) {
-      return gameResult.awayTeam.name;
+    if (currentGameResult.homeTeam.score > currentGameResult.awayTeam.score) {
+      return currentGameResult.homeTeam.name;
+    } else if (currentGameResult.awayTeam.score > currentGameResult.homeTeam.score) {
+      return currentGameResult.awayTeam.name;
     } else {
       return '引き分け';
     }
   };
 
   const getWinnerColor = () => {
-    if (gameResult.homeTeam.score > gameResult.awayTeam.score) {
+    if (currentGameResult.homeTeam.score > currentGameResult.awayTeam.score) {
       return 'red';
-    } else if (gameResult.awayTeam.score > gameResult.homeTeam.score) {
+    } else if (currentGameResult.awayTeam.score > currentGameResult.homeTeam.score) {
       return 'blue';
     } else {
       return 'gray';
     }
   };
+
+  if (isResimulating) {
+    return (
+      <Container size="sm" py="xl">
+        <Paper shadow="xs" p="xl" radius="md" withBorder>
+          <Stack gap="xl" align="center">
+            <Center>
+              <Loader size="xl" color="blue" />
+            </Center>
+            <Stack gap="md" align="center">
+              <IconTrophy size={48} color="var(--mantine-color-blue-6)" />
+              <Title order={2}>再シミュレーション中...</Title>
+              <Text c="dimmed" ta="center" size="lg">
+                同じメンバーで再度シミュレートしています
+              </Text>
+            </Stack>
+          </Stack>
+        </Paper>
+      </Container>
+    );
+  }
 
   return (
     <Container size="xl" py="xl">
@@ -169,7 +323,7 @@ export default function Scoreboard({ gameResult, onNewGame }: ScoreboardProps) {
             >
               <Stack gap="md" align="center">
                 <Title order={2} c="white">
-                  {gameResult.awayTeam.name} {gameResult.awayTeam.score} - {gameResult.homeTeam.score} {gameResult.homeTeam.name}
+                  {currentGameResult.awayTeam.name} {currentGameResult.awayTeam.score} - {currentGameResult.homeTeam.score} {currentGameResult.homeTeam.name}
                 </Title>
                 <Group gap="sm">
                   <IconTrophy size={24} />
@@ -180,14 +334,54 @@ export default function Scoreboard({ gameResult, onNewGame }: ScoreboardProps) {
               </Stack>
             </Card>
 
-            <Button
-              size="lg"
-              leftSection={<IconRefresh size={20} />}
-              onClick={onNewGame}
-              color="green"
-            >
-              新しい試合を開始
-            </Button>
+            {/* ナビゲーションリンク */}
+            <Group gap="md" mt="md">
+              <Badge size="lg" variant="light" color="gray">
+                <a href="/home" style={{ textDecoration: 'none', color: 'inherit' }}>
+                  <Group gap="xs">
+                    <IconHome size={16} />
+                    ホーム
+                  </Group>
+                </a>
+              </Badge>
+              <Badge size="lg" variant="light" color="gray">
+                <a href="/about" style={{ textDecoration: 'none', color: 'inherit' }}>
+                  <Group gap="xs">
+                    <IconInfoCircle size={16} />
+                    アプリについて
+                  </Group>
+                </a>
+              </Badge>
+              <Badge size="lg" variant="light" color="gray">
+                <a href="/history" style={{ textDecoration: 'none', color: 'inherit' }}>
+                  <Group gap="xs">
+                    <IconHistory size={16} />
+                    試合履歴
+                  </Group>
+                </a>
+              </Badge>
+            </Group>
+
+            {/* ボタングループ */}
+            <Group gap="md" mt="md">
+              <Button
+                size="lg"
+                leftSection={<IconUserEdit size={20} />}
+                onClick={handleChangeMembers}
+                color="blue"
+              >
+                メンバー変更
+              </Button>
+              <Button
+                size="lg"
+                leftSection={<IconRefresh size={20} />}
+                onClick={handleResimulate}
+                color="green"
+                loading={isResimulating}
+              >
+                同じメンバーでもう一度
+              </Button>
+            </Group>
           </Stack>
         </Paper>
 
@@ -200,10 +394,10 @@ export default function Scoreboard({ gameResult, onNewGame }: ScoreboardProps) {
         <Paper shadow="xs" p="xl" radius="md" withBorder>
           <Grid gutter="xl">
             <Grid.Col span={{ base: 12, lg: 6 }}>
-              {renderPlayerStats(gameResult.awayTeam.players, gameResult.awayTeam.name, 'blue')}
+              {renderPlayerStats(currentGameResult.awayTeam.players, currentGameResult.awayTeam.name, 'blue')}
             </Grid.Col>
             <Grid.Col span={{ base: 12, lg: 6 }}>
-              {renderPlayerStats(gameResult.homeTeam.players, gameResult.homeTeam.name, 'red')}
+              {renderPlayerStats(currentGameResult.homeTeam.players, currentGameResult.homeTeam.name, 'red')}
             </Grid.Col>
           </Grid>
         </Paper>
@@ -217,7 +411,7 @@ export default function Scoreboard({ gameResult, onNewGame }: ScoreboardProps) {
                 <Card shadow="xs" padding="md" radius="md" withBorder>
                   <Stack gap="xs" align="center">
                     <Text size="sm" c="dimmed">総得点</Text>
-                    <Title order={4}>{gameResult.homeTeam.score + gameResult.awayTeam.score}</Title>
+                    <Title order={4}>{currentGameResult.homeTeam.score + currentGameResult.awayTeam.score}</Title>
                   </Stack>
                 </Card>
               </Grid.Col>
@@ -225,7 +419,7 @@ export default function Scoreboard({ gameResult, onNewGame }: ScoreboardProps) {
                 <Card shadow="xs" padding="md" radius="md" withBorder>
                   <Stack gap="xs" align="center">
                     <Text size="sm" c="dimmed">最多得点</Text>
-                    <Title order={4}>{Math.max(gameResult.homeTeam.score, gameResult.awayTeam.score)}</Title>
+                    <Title order={4}>{Math.max(currentGameResult.homeTeam.score, currentGameResult.awayTeam.score)}</Title>
                   </Stack>
                 </Card>
               </Grid.Col>
@@ -233,7 +427,7 @@ export default function Scoreboard({ gameResult, onNewGame }: ScoreboardProps) {
                 <Card shadow="xs" padding="md" radius="md" withBorder>
                   <Stack gap="xs" align="center">
                     <Text size="sm" c="dimmed">最少得点</Text>
-                    <Title order={4}>{Math.min(gameResult.homeTeam.score, gameResult.awayTeam.score)}</Title>
+                    <Title order={4}>{Math.min(currentGameResult.homeTeam.score, currentGameResult.awayTeam.score)}</Title>
                   </Stack>
                 </Card>
               </Grid.Col>
@@ -241,7 +435,7 @@ export default function Scoreboard({ gameResult, onNewGame }: ScoreboardProps) {
                 <Card shadow="xs" padding="md" radius="md" withBorder>
                   <Stack gap="xs" align="center">
                     <Text size="sm" c="dimmed">得点差</Text>
-                    <Title order={4}>{Math.abs(gameResult.homeTeam.score - gameResult.awayTeam.score)}</Title>
+                    <Title order={4}>{Math.abs(currentGameResult.homeTeam.score - currentGameResult.awayTeam.score)}</Title>
                   </Stack>
                 </Card>
               </Grid.Col>
