@@ -1,0 +1,2 @@
+# batting_simulation_with_AI
+野球の打撃成績をシミュレーションするアプリ
