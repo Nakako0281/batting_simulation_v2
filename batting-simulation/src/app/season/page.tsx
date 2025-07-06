@@ -40,6 +40,20 @@ export default function SeasonPage() {
   const [isSimulating, setIsSimulating] = useState(false);
   const [currentGame, setCurrentGame] = useState(0);
 
+  const saveSeasonToHistory = useCallback((seasonResult: SeasonResult) => {
+    const history = JSON.parse(localStorage.getItem('seasonHistory') || '[]');
+    const newSeason = {
+      ...seasonResult,
+      id: Date.now().toString(),
+      timestamp: new Date().toISOString()
+    };
+    history.unshift(newSeason); // 最新のシーズンを先頭に追加
+    
+    // 最新の5シーズンのみ保持
+    const limitedHistory = history.slice(0, 5);
+    localStorage.setItem('seasonHistory', JSON.stringify(limitedHistory));
+  }, []);
+
   const simulateSeason = useCallback((homePlayers: Player[], awayPlayers: Player[], homeTeamName: string, awayTeamName: string) => {
     setIsSimulating(true);
     setCurrentGame(0);
@@ -265,7 +279,7 @@ export default function SeasonPage() {
 
     // シーズン結果を履歴に保存
     saveSeasonToHistory(currentSeasonResult);
-  }, []);
+  }, [saveSeasonToHistory]);
 
   // コンポーネントマウント時にシミュレーションを開始
   useEffect(() => {
@@ -278,20 +292,6 @@ export default function SeasonPage() {
     const { homePlayers, awayPlayers, homeTeamName, awayTeamName } = JSON.parse(gameData);
     simulateSeason(homePlayers, awayPlayers, homeTeamName, awayTeamName);
   }, [router, simulateSeason]);
-
-  const saveSeasonToHistory = useCallback((seasonResult: SeasonResult) => {
-    const history = JSON.parse(localStorage.getItem('seasonHistory') || '[]');
-    const newSeason = {
-      ...seasonResult,
-      id: Date.now().toString(),
-      timestamp: new Date().toISOString()
-    };
-    history.unshift(newSeason); // 最新のシーズンを先頭に追加
-    
-    // 最新の5シーズンのみ保持
-    const limitedHistory = history.slice(0, 5);
-    localStorage.setItem('seasonHistory', JSON.stringify(limitedHistory));
-  }, []);
 
   const handleNewSeason = useCallback(() => {
     router.push('/home');
