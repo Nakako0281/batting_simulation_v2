@@ -1,10 +1,10 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Player, GameResult, GameStats } from '../../types/baseball';
+import { Player, GameResult } from '../../types/baseball';
 import { simulateInning } from '../../utils/baseballSimulation';
 import Scoreboard from '../../components/Scoreboard';
-import { Container, Stack, Text, Loader, Center, Paper, Title, Button, Group, Skeleton, Progress } from '@mantine/core';
+import { Container, Stack, Text, Loader, Center, Paper, Title, Button, Group, Progress } from '@mantine/core';
 import { IconBallBaseball, IconRefresh, IconUserEdit } from '@tabler/icons-react';
 import { useRouter } from 'next/navigation';
 
@@ -15,20 +15,21 @@ export default function ResultPage() {
   const [isResimulating, setIsResimulating] = useState(false);
   const [currentInning, setCurrentInning] = useState(0);
 
-  useEffect(() => {
-    // ローカルストレージから試合データを取得
-    const gameData = localStorage.getItem('currentGame');
-    if (!gameData) {
-      // データがない場合はホームページにリダイレクト
-      router.push('/home');
-      return;
-    }
+  const saveGameToHistory = useCallback((gameResult: GameResult) => {
+    const history = JSON.parse(localStorage.getItem('gameHistory') || '[]');
+    const newGame = {
+      ...gameResult,
+      id: Date.now().toString(),
+      timestamp: new Date().toISOString()
+    };
+    history.unshift(newGame); // 最新の試合を先頭に追加
+    
+    // 最新の10試合のみ保持
+    const limitedHistory = history.slice(0, 10);
+    localStorage.setItem('gameHistory', JSON.stringify(limitedHistory));
+  }, []);
 
-    const { homePlayers, awayPlayers, homeTeamName, awayTeamName } = JSON.parse(gameData);
-    simulateGame(homePlayers, awayPlayers, homeTeamName, awayTeamName);
-  }, [router]);
-
-  const simulateGame = (homePlayers: Player[], awayPlayers: Player[], homeTeamName: string, awayTeamName: string) => {
+  const simulateGame = useCallback((homePlayers: Player[], awayPlayers: Player[], homeTeamName: string, awayTeamName: string) => {
     setIsSimulating(true);
     setCurrentInning(0);
     
@@ -75,7 +76,7 @@ export default function ResultPage() {
       isComplete: false
     };
 
-    let currentGameResult = { ...initialGameResult };
+    const currentGameResult = { ...initialGameResult };
     
     // 打者順序を管理する変数
     let awayBatterIndex = 0;
@@ -132,11 +133,21 @@ export default function ResultPage() {
 
     // 試合結果を履歴に保存
     saveGameToHistory(currentGameResult);
-  };
+  }, [saveGameToHistory]);
+
+  // コンポーネントマウント時にシミュレーションを開始
+  useEffect(() => {
+    const gameData = localStorage.getItem('currentGame');
+    if (!gameData) {
+      router.push('/home');
+      return;
+    }
+    const { homePlayers, awayPlayers, homeTeamName, awayTeamName } = JSON.parse(gameData);
+    simulateGame(homePlayers, awayPlayers, homeTeamName, awayTeamName);
+  }, [router, simulateGame]);
 
   const handleResimulate = useCallback(() => {
     setIsResimulating(true);
-    
     // ローカルストレージから元の選手データを取得
     const gameData = localStorage.getItem('currentGame');
     if (!gameData) {
@@ -144,25 +155,10 @@ export default function ResultPage() {
       setIsResimulating(false);
       return;
     }
-
     const { homePlayers, awayPlayers, homeTeamName, awayTeamName } = JSON.parse(gameData);
     simulateGame(homePlayers, awayPlayers, homeTeamName, awayTeamName);
     setIsResimulating(false);
-  }, []);
-
-  const saveGameToHistory = useCallback((gameResult: GameResult) => {
-    const history = JSON.parse(localStorage.getItem('gameHistory') || '[]');
-    const newGame = {
-      ...gameResult,
-      id: Date.now().toString(),
-      timestamp: new Date().toISOString()
-    };
-    history.unshift(newGame); // 最新の試合を先頭に追加
-    
-    // 最新の10試合のみ保持
-    const limitedHistory = history.slice(0, 10);
-    localStorage.setItem('gameHistory', JSON.stringify(limitedHistory));
-  }, []);
+  }, [simulateGame]);
 
   const handleNewGame = useCallback(() => {
     router.push('/home');
@@ -200,7 +196,7 @@ export default function ResultPage() {
   }
 
   if (gameResult) {
-    return <Scoreboard gameResult={gameResult} onNewGame={handleNewGame} />;
+    return <Scoreboard gameResult={gameResult} />;
   }
 
   return (

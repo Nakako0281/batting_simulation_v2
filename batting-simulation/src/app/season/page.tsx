@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Player, GameResult, GameStats } from '../../types/baseball';
 import { simulateInning } from '../../utils/baseballSimulation';
 import SeasonScoreboard from '../../components/SeasonScoreboard';
-import { Container, Stack, Text, Loader, Center, Paper, Title, Button, Group, Progress, Alert, Skeleton } from '@mantine/core';
+import { Container, Stack, Text, Loader, Center, Paper, Title, Button, Progress } from '@mantine/core';
 import { IconBallBaseball, IconUserEdit } from '@tabler/icons-react';
 import { useRouter } from 'next/navigation';
 
@@ -39,22 +39,8 @@ export default function SeasonPage() {
   const [seasonResult, setSeasonResult] = useState<SeasonResult | null>(null);
   const [isSimulating, setIsSimulating] = useState(false);
   const [currentGame, setCurrentGame] = useState(0);
-  const [currentGameResult, setCurrentGameResult] = useState<GameResult | null>(null);
 
-  useEffect(() => {
-    // ローカルストレージから試合データを取得
-    const gameData = localStorage.getItem('currentGame');
-    if (!gameData) {
-      // データがない場合はホームページにリダイレクト
-      router.push('/home');
-      return;
-    }
-
-    const { homePlayers, awayPlayers, homeTeamName, awayTeamName } = JSON.parse(gameData);
-    simulateSeason(homePlayers, awayPlayers, homeTeamName, awayTeamName);
-  }, [router]);
-
-  const simulateSeason = (homePlayers: Player[], awayPlayers: Player[], homeTeamName: string, awayTeamName: string) => {
+  const simulateSeason = useCallback((homePlayers: Player[], awayPlayers: Player[], homeTeamName: string, awayTeamName: string) => {
     setIsSimulating(true);
     setCurrentGame(0);
     
@@ -110,7 +96,7 @@ export default function SeasonPage() {
       isComplete: false
     };
 
-    let currentSeasonResult = { ...initialSeasonResult };
+    const currentSeasonResult = { ...initialSeasonResult };
 
     // 143試合をシミュレート
     for (let game = 0; game < 143; game++) {
@@ -271,7 +257,6 @@ export default function SeasonPage() {
       });
 
       setCurrentGame(game + 1);
-      setCurrentGameResult(gameResult);
     }
 
     currentSeasonResult.isComplete = true;
@@ -280,7 +265,19 @@ export default function SeasonPage() {
 
     // シーズン結果を履歴に保存
     saveSeasonToHistory(currentSeasonResult);
-  };
+  }, []);
+
+  // コンポーネントマウント時にシミュレーションを開始
+  useEffect(() => {
+    const gameData = localStorage.getItem('currentGame');
+    if (!gameData) {
+      router.push('/home');
+      return;
+    }
+
+    const { homePlayers, awayPlayers, homeTeamName, awayTeamName } = JSON.parse(gameData);
+    simulateSeason(homePlayers, awayPlayers, homeTeamName, awayTeamName);
+  }, [router, simulateSeason]);
 
   const saveSeasonToHistory = useCallback((seasonResult: SeasonResult) => {
     const history = JSON.parse(localStorage.getItem('seasonHistory') || '[]');

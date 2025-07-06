@@ -1,25 +1,20 @@
 'use client';
 
-import { useState, useMemo, useCallback } from 'react';
+import { useMemo, useCallback } from 'react';
 import { Player, GameStats } from '../types/baseball';
-import { calculateOPS } from '../utils/baseballSimulation';
 import {
   Container,
   Stack,
   Title,
   Text,
   Card,
-  CardSection,
   Group,
   Button,
   Table,
   Box,
-  Badge,
   Paper,
   Grid,
-  Center,
   Alert,
-  Skeleton,
 } from '@mantine/core';
 import {
   IconTrophy,
@@ -28,10 +23,8 @@ import {
   IconUserEdit,
   IconHistory,
   IconBallBaseball,
-  IconTarget,
-  IconTrendingUp,
 } from '@tabler/icons-react';
-import { useRouter } from 'next/navigation';
+
 
 interface SeasonStats extends GameStats {
   games: number;
@@ -55,7 +48,7 @@ interface SeasonResult {
     ties: number;
     players: (Player & SeasonStats)[];
   };
-  games: any[];
+  games: unknown[];
   isComplete: boolean;
 }
 
@@ -66,7 +59,6 @@ interface SeasonScoreboardProps {
 }
 
 export default function SeasonScoreboard({ seasonResult, onNewSeason, onViewHistory }: SeasonScoreboardProps) {
-  const router = useRouter();
 
   const formatAverage = useCallback((hits: number, atBats: number): string => {
     if (atBats === 0) return '.000';

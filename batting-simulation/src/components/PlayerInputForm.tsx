@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import Link from 'next/link';
 import { Player } from '../types/baseball';
 import {
   Container,
@@ -15,9 +16,8 @@ import {
   Grid,
   Paper,
   Badge,
-  Divider,
   Box,
-    Center,
+  Center,
   Alert,
 } from '@mantine/core';
 import { IconBallBaseball, IconUsers, IconTrophy, IconInfoCircle } from '@tabler/icons-react';
@@ -57,17 +57,17 @@ export default function PlayerInputForm({ onPlayersSet }: PlayerInputFormProps) 
     };
   };
 
-  const initializePlayers = () => {
+  const initializePlayers = useCallback(() => {
     const home = Array.from({ length: 9 }, (_, i) => createDefaultPlayer('home', i + 1));
     const away = Array.from({ length: 9 }, (_, i) => createDefaultPlayer('away', i + 1));
     setHomePlayers(home);
     setAwayPlayers(away);
-  };
+  }, []);
 
   // コンポーネントマウント時に選手を初期化
   useEffect(() => {
     initializePlayers();
-  }, []);
+  }, [initializePlayers]);
 
   const updatePlayer = (team: 'home' | 'away', position: number, field: keyof Player, value: string | number) => {
     const players = team === 'home' ? homePlayers : awayPlayers;
@@ -230,17 +230,17 @@ export default function PlayerInputForm({ onPlayersSet }: PlayerInputFormProps) 
             {/* ナビゲーションリンク */}
             <Group gap="md" mt="md">
               <Badge size="lg" variant="light" color="blue">
-                <a href="/" style={{ textDecoration: 'none', color: 'inherit' }}>
+                <Link href="/" style={{ textDecoration: 'none', color: 'inherit' }}>
                   ホーム
-                </a>
+                </Link>
               </Badge>
               <Badge size="lg" variant="light" color="gray">
-                <a href="/about" style={{ textDecoration: 'none', color: 'inherit' }}>
+                <Link href="/about" style={{ textDecoration: 'none', color: 'inherit' }}>
                   <Group gap="xs">
                     <IconInfoCircle size={16} />
                     アプリについて
                   </Group>
-                </a>
+                </Link>
               </Badge>
             </Group>
           </Stack>

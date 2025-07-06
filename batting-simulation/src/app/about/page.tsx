@@ -7,7 +7,6 @@ import {
   Paper,
   Stack,
   Card,
-  CardSection,
   Group,
   Badge,
   Button,
@@ -16,9 +15,7 @@ import {
   Center,
   Alert,
   Code,
-  Divider,
   List,
-  ThemeIcon,
   Grid,
 } from '@mantine/core';
 import {

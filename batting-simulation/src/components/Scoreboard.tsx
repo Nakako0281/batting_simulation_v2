@@ -17,10 +17,7 @@ import {
   Box,
   Center,
   Grid,
-  Divider,
-  Alert,
   Loader,
-  Skeleton,
   Progress,
 } from '@mantine/core';
 import { IconTrophy, IconRefresh, IconChartBar, IconUsers, IconHome, IconHistory, IconInfoCircle, IconUserEdit } from '@tabler/icons-react';
@@ -29,10 +26,9 @@ import { useRouter } from 'next/navigation';
 
 interface ScoreboardProps {
   gameResult: GameResult;
-  onNewGame: () => void;
 }
 
-export default function Scoreboard({ gameResult, onNewGame }: ScoreboardProps) {
+export default function Scoreboard({ gameResult }: ScoreboardProps) {
   const router = useRouter();
   const [isResimulating, setIsResimulating] = useState(false);
   const [currentGameResult, setCurrentGameResult] = useState<GameResult>(gameResult);
@@ -45,6 +41,20 @@ export default function Scoreboard({ gameResult, onNewGame }: ScoreboardProps) {
   const formatOPS = useCallback((player: Player & GameStats): string => {
     const ops = calculateOPS(player);
     return ops.toFixed(3);
+  }, []);
+
+  const saveGameToHistory = useCallback((gameResult: GameResult) => {
+    const history = JSON.parse(localStorage.getItem('gameHistory') || '[]');
+    const newGame = {
+      ...gameResult,
+      id: Date.now().toString(),
+      timestamp: new Date().toISOString()
+    };
+    history.unshift(newGame); // 最新の試合を先頭に追加
+    
+    // 最新の10試合のみ保持
+    const limitedHistory = history.slice(0, 10);
+    localStorage.setItem('gameHistory', JSON.stringify(limitedHistory));
   }, []);
 
   const handleResimulate = useCallback(() => {
@@ -103,7 +113,7 @@ export default function Scoreboard({ gameResult, onNewGame }: ScoreboardProps) {
       isComplete: false
     };
 
-    let newGameResult = { ...initialGameResult };
+    const newGameResult = { ...initialGameResult };
     
     // 打者順序を管理する変数
     let awayBatterIndex = 0;
@@ -158,21 +168,7 @@ export default function Scoreboard({ gameResult, onNewGame }: ScoreboardProps) {
 
     // 試合結果を履歴に保存
     saveGameToHistory(newGameResult);
-  }, []);
-
-  const saveGameToHistory = useCallback((gameResult: GameResult) => {
-    const history = JSON.parse(localStorage.getItem('gameHistory') || '[]');
-    const newGame = {
-      ...gameResult,
-      id: Date.now().toString(),
-      timestamp: new Date().toISOString()
-    };
-    history.unshift(newGame); // 最新の試合を先頭に追加
-    
-    // 最新の10試合のみ保持
-    const limitedHistory = history.slice(0, 10);
-    localStorage.setItem('gameHistory', JSON.stringify(limitedHistory));
-  }, []);
+  }, [saveGameToHistory]);
 
   const handleChangeMembers = useCallback(() => {
     router.push('/home');
@@ -278,16 +274,6 @@ export default function Scoreboard({ gameResult, onNewGame }: ScoreboardProps) {
       return '引き分け';
     }
   }, [currentGameResult.homeTeam.score, currentGameResult.awayTeam.score, currentGameResult.homeTeam.name, currentGameResult.awayTeam.name]);
-
-  const getWinnerColor = useMemo(() => {
-    if (currentGameResult.homeTeam.score > currentGameResult.awayTeam.score) {
-      return 'red';
-    } else if (currentGameResult.awayTeam.score > currentGameResult.homeTeam.score) {
-      return 'blue';
-    } else {
-      return 'gray';
-    }
-  }, [currentGameResult.homeTeam.score, currentGameResult.awayTeam.score]);
 
   if (isResimulating) {
     return (

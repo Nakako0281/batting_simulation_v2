@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Player } from '../../types/baseball';
 import {
   Container,
@@ -58,18 +58,17 @@ export default function HomePage() {
     };
   };
 
-  const initializePlayers = () => {
+  const initializePlayers = useCallback(() => {
     const home = Array.from({ length: 9 }, (_, i) => createDefaultPlayer('home', i + 1));
     const away = Array.from({ length: 9 }, (_, i) => createDefaultPlayer('away', i + 1));
     setHomePlayers(home);
     setAwayPlayers(away);
-  };
+  }, []);
 
   // コンポーネントマウント時に選手を初期化
   useEffect(() => {
     const loadData = async () => {
       setIsLoading(true);
-      
       // ローカルストレージから保存されたデータを読み込み
       const savedData = localStorage.getItem('playerData');
       if (savedData) {
@@ -87,15 +86,13 @@ export default function HomePage() {
       } else {
         initializePlayers();
       }
-      
       setIsLoading(false);
     };
-    
     loadData();
-  }, []);
+  }, [initializePlayers]);
 
   // 選手データの保存
-  const savePlayerData = () => {
+  const savePlayerData = useCallback(() => {
     const playerData = {
       homeTeamName,
       awayTeamName,
@@ -105,10 +102,10 @@ export default function HomePage() {
     };
     localStorage.setItem('playerData', JSON.stringify(playerData));
     setIsDataSaved(true);
-  };
+  }, [homeTeamName, awayTeamName, homePlayers, awayPlayers]);
 
   // 選手データの読み込み
-  const loadPlayerData = () => {
+  const loadPlayerData = useCallback(() => {
     const savedData = localStorage.getItem('playerData');
     if (savedData) {
       try {
@@ -127,14 +124,14 @@ export default function HomePage() {
       initializePlayers();
       setIsDataSaved(false);
     }
-  };
+  }, [initializePlayers]);
 
   // 選手データの自動保存（選手データが変更されたとき）
   useEffect(() => {
     if (homePlayers.length > 0 && awayPlayers.length > 0) {
       savePlayerData();
     }
-  }, [homePlayers, awayPlayers, homeTeamName, awayTeamName]);
+  }, [homePlayers, awayPlayers, homeTeamName, awayTeamName, savePlayerData]);
 
   // コンポーネントマウント時に保存されたデータを読み込み
   useEffect(() => {
@@ -144,7 +141,7 @@ export default function HomePage() {
       setIsLoading(false);
     };
     loadData();
-  }, []);
+  }, [loadPlayerData]);
 
   const updatePlayer = useCallback((team: 'home' | 'away', position: number, field: keyof Player, value: string | number) => {
     const players = team === 'home' ? homePlayers : awayPlayers;
@@ -153,13 +150,12 @@ export default function HomePage() {
         ? { ...player, [field]: value }
         : player
     );
-    
     if (team === 'home') {
       setHomePlayers(updatedPlayers);
     } else {
       setAwayPlayers(updatedPlayers);
     }
-  }, [homePlayers, awayPlayers]);
+  }, [homePlayers, awayPlayers, setHomePlayers, setAwayPlayers]);
 
   const handleSubmit = useCallback(() => {
     // 全選手の名前が入力されているかチェック
@@ -217,7 +213,7 @@ export default function HomePage() {
       setAwayTeamName('アウェイチーム');
       setIsDataSaved(false);
     }
-  }, []);
+  }, [initializePlayers]);
 
   const renderPlayerInputs = useCallback((players: Player[], team: 'home' | 'away') => (
     <Stack gap="lg">

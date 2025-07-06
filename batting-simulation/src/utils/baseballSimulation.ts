@@ -51,7 +51,7 @@ export function simulateInning(batters: Player[], isTop: boolean, startBatterInd
   gameStats: GameStats[]; 
   nextBatterIndex: number 
 } {
-  const gameStats: GameStats[] = batters.map(player => ({
+  const gameStats: GameStats[] = batters.map(() => ({
     atBats: 0,
     hits: 0,
     doubles: 0,
