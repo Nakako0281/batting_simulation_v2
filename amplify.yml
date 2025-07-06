@@ -1,0 +1,19 @@
+version: 1
+frontend:
+  phases:
+    preBuild:
+      commands:
+        - echo "Installing dependencies..."
+        - yarn install
+    build:
+      commands:
+        - echo "Building the application..."
+        - yarn build
+  artifacts:
+    baseDirectory: batting-simulation/out
+    files:
+      - '**/*'
+  cache:
+    paths:
+      - batting-simulation/node_modules/**/*
+      - batting-simulation/.next/cache/**/* 
