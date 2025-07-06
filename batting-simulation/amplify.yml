@@ -4,16 +4,16 @@ frontend:
     preBuild:
       commands:
         - echo "Installing dependencies..."
-        - yarn install --frozen-lockfile
+        - yarn install
     build:
       commands:
         - echo "Building the application..."
         - yarn build
   artifacts:
-    baseDirectory: out
+    baseDirectory: batting-simulation/out
     files:
       - '**/*'
   cache:
     paths:
-      - node_modules/**/*
-      - .next/cache/**/* 
+      - batting-simulation/node_modules/**/*
+      - batting-simulation/.next/cache/**/* 

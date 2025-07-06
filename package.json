@@ -1,0 +1,13 @@
+{
+  "name": "batting-simulation-root",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "build": "cd batting-simulation && yarn build",
+    "install": "cd batting-simulation && yarn install"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "yarn": ">=1.22.0"
+  }
+} 
