@@ -3,8 +3,9 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
+    "prebuild": "cd batting-simulation && yarn install --frozen-lockfile",
     "build": "cd batting-simulation && yarn build",
-    "install": "cd batting-simulation && yarn install"
+    "install": "cd batting-simulation && yarn install --frozen-lockfile"
   },
   "engines": {
     "node": ">=18.0.0",
